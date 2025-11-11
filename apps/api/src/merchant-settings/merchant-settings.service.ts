@@ -1,5 +1,5 @@
 // apps/api/src/merchant-settings/merchant-settings.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpsertMerchantSettingsDto } from './dto/upsert-merchant-settings.dto';
 
