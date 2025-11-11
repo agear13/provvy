@@ -15,4 +15,4 @@ async function bootstrap() {
   console.log(`🚀 Provvypay API running at http://localhost:${port}`);
 }
 
-bootstrap();
+void bootstrap();
