@@ -2,9 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactCompiler: false,
-  turbopack: {
-    root: "C:\\Users\\alish\\Documents\\provvypay",
-  },
+  // No custom turbopack.root – let Next.js handle it
 };
 
 export default nextConfig;
