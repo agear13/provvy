@@ -33,7 +33,11 @@ export async function POST(req: NextRequest) {
       logo: logoMeta,
       note: "Mock save only. Wire to NestJS DB & S3 next.",
     });
-  } catch (err: any) {
-    return new NextResponse(err?.message ?? "Bad Request", { status: 400 });
+} catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Bad Request";
+
+    return new NextResponse(message, { status: 400 });
   }
 }
+

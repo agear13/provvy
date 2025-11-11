@@ -97,9 +97,13 @@ export default function SettingsForm({ orgId, clerkUserId }: SettingsFormProps) 
       }
 
       setMessage("Settings saved successfully!");
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message ?? "Something went wrong while saving settings.");
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while saving settings.";
+      setError(message);
     } finally {
       setIsSaving(false);
     }
