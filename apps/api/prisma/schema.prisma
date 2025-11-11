@@ -1,0 +1,39 @@
+// apps/api/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Each Clerk organization that uses Provvypay
+model Organization {
+  id         String            @id @default(cuid())
+  clerkOrgId String            @unique
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  settings   MerchantSettings?
+}
+
+// Merchant settings for each organization
+model MerchantSettings {
+  id                 String        @id @default(cuid())
+  orgId              String        @unique
+  org                Organization  @relation(fields: [orgId], references: [id])
+
+  displayName        String
+  logoKey            String?       // S3 key, e.g. uploads/orgId/uuid.png
+
+  // ISO 3-letter currency codes, e.g. "USD", "AUD"
+  defaultCurrency    String        @db.VarChar(3)
+  functionalCurrency String        @db.VarChar(3)
+
+  updatedByUserId    String        // Clerk user ID
+
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+}
