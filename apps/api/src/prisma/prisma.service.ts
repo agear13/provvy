@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 
-// Use require here to avoid TypeScript/module interop issues with @prisma/client in CI
+// Use require to avoid TS/module interop issues with @prisma/client in CI
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { PrismaClient } = require('@prisma/client');
 
@@ -10,7 +10,6 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   async onModuleInit() {
-    // Optional guards so TS + runtime both stay happy
     if (typeof this.$connect === 'function') {
       await this.$connect();
     }
