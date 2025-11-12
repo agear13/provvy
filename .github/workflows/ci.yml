@@ -18,8 +18,10 @@ jobs:
     env:
       # Avoid Next / telemetry noise in CI
       NEXT_TELEMETRY_DISABLED: 1
+      TURBO_TELEMETRY_DISABLED:1
       # If any tools complain about missing DATABASE_URL, you can set a dummy here:
-      # DATABASE_URL: "postgresql://user:pass@localhost:5432/db"
+      DATABASE_URL: $${{ secrets.NEON_DATABASE_URL }}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_ci_stub"
 
     steps:
       - name: Checkout repository
