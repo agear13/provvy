@@ -17,11 +17,12 @@ jobs:
 
     env:
       # Avoid Next / telemetry noise in CI
-      NEXT_TELEMETRY_DISABLED: 1
-      TURBO_TELEMETRY_DISABLED:1
+      NEXT_TELEMETRY_DISABLED: '1'
+      TURBO_TELEMETRY_DISABLED: '1'
       # If any tools complain about missing DATABASE_URL, you can set a dummy here:
-      DATABASE_URL: $${{ secrets.NEON_DATABASE_URL }}
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_ci_stub"
+      DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci_stub
+      CLERK_SECRET_KEY: sk_test_ci_stub
 
     steps:
       - name: Checkout repository
