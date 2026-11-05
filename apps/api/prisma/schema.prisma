@@ -16,7 +16,191 @@ model Organization {
   createdAt  DateTime          @default(now())
   updatedAt  DateTime          @updatedAt
 
-  settings   MerchantSettings?
+  settings          MerchantSettings?
+  paymentLinks      PaymentLink[]
+  agreements        Agreement[]
+  partnerProposals  PartnerRelationshipProposal[]
+}
+
+enum PaymentStatus {
+  DRAFT
+  OPEN
+  PAID
+  EXPIRED
+  CANCELED
+}
+
+model PaymentLink {
+  id              String        @id @default(cuid())
+  orgId           String
+  org             Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  amountMinor     Int
+  currency        String        @db.VarChar(3)
+  description     String?
+  invoiceRef      String?
+  customerEmail   String?
+  customerPhone   String?
+  shortCode       String        @unique
+  expiresAt       DateTime?
+  status          PaymentStatus @default(OPEN)
+  qrKey           String?
+  paymentIntentId String?       @unique
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  events          PaymentEvent[]
+
+  @@index([orgId, status, createdAt])
+}
+
+model PaymentEvent {
+  id        String      @id @default(cuid())
+  linkId    String
+  link      PaymentLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  type      String
+  raw       Json
+  createdAt DateTime    @default(now())
+
+  @@index([linkId, createdAt])
+}
+
+model Agreement {
+  id             String   @id
+  organizationId String   @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  participantId  String?  @map("participant_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  versions       AgreementVersion[]
+
+  @@map("agreements")
+}
+
+model AgreementVersion {
+  id             String   @id
+  agreementId    String   @map("agreement_id")
+  agreement      Agreement @relation(fields: [agreementId], references: [id])
+  versionNumber  Int      @map("version_number")
+  status         String
+  effectiveFrom  DateTime @map("effective_from")
+  stackingCapBps Int?     @map("stacking_cap_bps")
+  executedAt     DateTime? @map("executed_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  terms          EconomicTerm[]
+  disclosures    ChildDeductionDisclosure[]
+  obligations    Obligation[]
+
+  @@unique([agreementId, versionNumber], map: "agreement_versions_agreement_id_version_number_key")
+  @@map("agreement_versions")
+}
+
+model EconomicTerm {
+  id                     String   @id
+  agreementVersionId     String   @map("agreement_version_id")
+  agreementVersion       AgreementVersion @relation(fields: [agreementVersionId], references: [id])
+  beneficiaryId          String   @map("beneficiary_id")
+  purpose                String
+  basis                  String
+  baseKey                String   @map("base_key")
+  shareBps               Int?     @map("share_bps")
+  fixedAmountAtomic      BigInt?  @map("fixed_amount_atomic")
+  fixedIndependentOfBase Boolean  @default(false) @map("fixed_independent_of_base")
+  overrideBps            Int?     @map("override_bps")
+  childTermId            String?  @map("child_term_id")
+  childTerm              EconomicTerm? @relation("OverrideChild", fields: [childTermId], references: [id])
+  overrides              EconomicTerm[] @relation("OverrideChild")
+  tierMode               String?  @map("tier_mode")
+  tiers                  Json?
+  fundingMode            String   @default("ORG_PAYS") @map("funding_mode")
+  deductionAuthorised    Boolean  @default(false) @map("deduction_authorised")
+  stackingCapAtomic      BigInt?  @map("stacking_cap_atomic")
+  obligationEligible     Boolean  @default(false) @map("obligation_eligible")
+  commissionStructureId  String   @map("commission_structure_id")
+  triggerType            String   @map("trigger_type")
+  level                  Int      @default(2)
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  @@index([agreementVersionId], map: "economic_terms_agreement_version_id_idx")
+  @@map("economic_terms")
+}
+
+model ChildDeductionDisclosure {
+  id                         String   @id
+  childParticipantId         String   @map("child_participant_id")
+  childAgreementVersionId    String   @map("child_agreement_version_id")
+  childAgreementVersion      AgreementVersion @relation(fields: [childAgreementVersionId], references: [id])
+  overrideAgreementVersionId String   @map("override_agreement_version_id")
+  overrideTermId             String   @map("override_term_id")
+  disclosed                  Boolean
+  statementCode              String   @map("statement_code")
+  childAgreementExecuted     Boolean  @map("child_agreement_executed")
+  createdAt                  DateTime @default(now()) @map("created_at")
+
+  @@unique([overrideTermId, childParticipantId], map: "child_deduction_disclosures_term_child_key")
+  @@map("child_deduction_disclosures")
+}
+
+model Obligation {
+  id                      String   @id
+  sourceEventId           String   @map("source_event_id")
+  beneficiaryId           String   @map("beneficiary_id")
+  purpose                 String
+  amountAtomic            BigInt   @map("amount_atomic")
+  grossCommissionAtomic   BigInt   @map("gross_commission_atomic")
+  overrideAmountAtomic    BigInt   @map("override_amount_atomic")
+  fundingMode             String   @map("funding_mode")
+  agreementVersionId      String   @map("agreement_version_id")
+  agreementVersion        AgreementVersion @relation(fields: [agreementVersionId], references: [id])
+  economicTermId          String   @map("economic_term_id")
+  commissionStructureId   String   @map("commission_structure_id")
+  assetCode               String   @map("asset_code")
+  childAgreementVersionId String?  @map("child_agreement_version_id")
+  disclosureId            String?  @map("disclosure_id")
+  splitGroupId            String   @map("split_group_id")
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  @@unique([sourceEventId, beneficiaryId, purpose], map: "obligations_d3_guard")
+  @@unique([sourceEventId, commissionStructureId, beneficiaryId], map: "obligations_retry_idempotency")
+  @@map("obligations")
+}
+
+model AccrualHold {
+  id                   String   @id
+  sourceEventId        String   @unique(map: "accrual_holds_source_event_id_key") @map("source_event_id")
+  reason               String
+  agreementVersionId   String?  @map("agreement_version_id")
+  financialEffect      String   @default("NONE") @map("financial_effect")
+  eventBaseCapAtomic   BigInt?  @map("event_base_cap_atomic")
+  eventBaseLimitAtomic BigInt?  @map("event_base_limit_atomic")
+  detail               Json
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  @@map("accrual_holds")
+}
+
+model FundingModeAudit {
+  id                  String   @id
+  agreementVersionId  String   @map("agreement_version_id")
+  economicTermId      String   @map("economic_term_id")
+  actorId             String   @map("actor_id")
+  actorKind           String   @map("actor_kind")
+  fundingMode         String   @map("funding_mode")
+  deductionAuthorised Boolean  @map("deduction_authorised")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@map("funding_mode_audits")
+}
+
+model PartnerRelationshipProposal {
+  id             String   @id
+  organizationId String   @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  externalRef    String   @map("external_ref")
+  displayName    String   @map("display_name")
+  sourceSystem   String   @map("source_system")
+  status         String   @default("PROPOSED")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([organizationId, sourceSystem, externalRef], map: "partner_proposals_org_source_ref_key")
+  @@map("partner_relationship_proposals")
 }
 
 // Merchant settings for each organization
